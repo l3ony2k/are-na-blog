@@ -3,6 +3,7 @@ export interface ArenaBlock {
   title: string;
   created_at: string;
   content: string;
+  content_html: string;
   image: {
     display: {
       url: string;
@@ -11,6 +12,7 @@ export interface ArenaBlock {
   source?: {
     url: string;
   };
+  position: number;
 }
 
 export interface ArenaChannel {

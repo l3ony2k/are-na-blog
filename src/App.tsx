@@ -3,7 +3,6 @@ import axios from 'axios';
 import Header from './components/Header';
 import BlogCard from './components/BlogCard';
 import Modal from './components/Modal';
-import ThemeSwitcher from './components/ThemeSwitcher';
 import { ArenaChannel, ArenaBlock } from './types';
 import { Loader2 } from 'lucide-react';
 import Masonry from 'react-masonry-css';
@@ -15,14 +14,17 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedBlock, setSelectedBlock] = useState<ArenaBlock | null>(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check system preference
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
 
   useEffect(() => {
     const fetchChannel = async () => {
       try {
         const response = await axios.get(`https://api.are.na/v2/channels/${CHANNEL_SLUG}?per=100`);
         const sortedContents = response.data.contents.sort((a: ArenaBlock, b: ArenaBlock) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          b.position - a.position
         );
         setChannel({ ...response.data, contents: sortedContents });
       } catch (err) {
@@ -33,6 +35,15 @@ function App() {
     };
 
     fetchChannel();
+
+    // Listen for changes in system color scheme preference
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e: MediaQueryListEvent) => {
+      setIsDarkMode(e.matches);
+    };
+    mediaQuery.addEventListener('change', handleChange);
+
+    return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
   useEffect(() => {
@@ -47,6 +58,10 @@ function App() {
     setSelectedBlock(null);
   };
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
   const breakpointColumnsObj = {
     default: 3,
     1100: 2,
@@ -55,29 +70,28 @@ function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
-        <Loader2 className="animate-spin text-gray-900 dark:text-white" size={48} />
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
+        <Loader2 className="animate-spin text-black dark:text-white" size={48} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center">
         <p className="text-red-500">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-      <Header channelTitle={channel?.title || 'Journaling and Healing'} />
-      <ThemeSwitcher isDarkMode={isDarkMode} toggleTheme={() => setIsDarkMode(!isDarkMode)} />
+    <div className="min-h-screen bg-white dark:bg-black text-black dark:text-white">
+      <Header channelTitle={channel?.title || 'Journaling and Healing'} isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       <main className="container mx-auto py-8 px-4">
         <Masonry
           breakpointCols={breakpointColumnsObj}
           className="flex w-auto -ml-4"
-          columnClassName="pl-4 bg-white dark:bg-gray-900"
+          columnClassName="pl-4 bg-white dark:bg-black"
         >
           {channel?.contents.map((block: ArenaBlock) => (
             <BlogCard key={block.id} block={block} onClick={() => openModal(block)} />
